@@ -196,22 +196,15 @@
         if ($(e.target).val() == "refresh") {
             $("#store_refresh_token_container").show();
             $("#refresh_prt_container").hide();
-            $("#api_version").show();
             $("#refresh_token_id_container").show();
             $("#prt_id_container").hide();
             $("#redirect_uri_container").hide();
-            $("#api_version_1").prop("checked", true);
-            $("#resource_container").show();
-            $("#scope_container").hide();
             $("#resource_input").attr("list", "resource_list_refresh");
             $("#client_id_input").attr("list", "client_id_list_refresh");
             getActiveRefreshToken(document.getElementById("refresh_token_id"));
         } else if ($(e.target).val() == "prt") {
             $("#store_refresh_token_container").hide();
             $("#refresh_prt_container").show();
-            $("#api_version").hide();
-            $("#resource_container").show();
-            $("#scope_container").hide();
             $("#refresh_token_id_container").hide();
             $("#prt_id_container").show();
             $("#redirect_uri_container").show();
@@ -238,17 +231,17 @@
         const resource = document.getElementById("resource_input").value;
         const scope = document.getElementById("scope_input").value;
         const activate = document.getElementById("activate_access_token").checked;
+        const apiVersion = parseInt($('#api_version input:radio:checked').val());
         
         if (tokenType === "refresh") {
             const tokenId = document.getElementById("refresh_token_id").value;
             const storeRefreshToken = document.getElementById("store_refresh_token").checked;
-            const apiVersion = parseInt($('#api_version input:radio:checked').val());
             refreshToAccessToken(tokenId, clientId, resource, scope, storeRefreshToken, activate, apiVersion);
         } else if (tokenType === "prt") {
             const tokenId = document.getElementById("prt_id").value;
             const refreshPrt = document.getElementById("refresh_prt").checked;
             const redirectUri = document.getElementById("redirect_uri").value;
-            refreshPrtToAccessToken(tokenId, clientId, resource, refreshPrt, redirectUri, activate);
+            refreshPrtToAccessToken(tokenId, clientId, resource, scope, refreshPrt, redirectUri, activate, apiVersion);
         }
         reloadTables();
     }

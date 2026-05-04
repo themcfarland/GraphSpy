@@ -111,11 +111,13 @@ function deleteRefreshToken(token_id) {
 
 // ========== PRT ==========
 
-function refreshPrtToAccessToken(prt_id, client_id, resource = "", refresh_prt = true, redirect_uri = null, activate = false) {
+function refreshPrtToAccessToken(prt_id, client_id, resource = "", scope = "", refresh_prt = true, redirect_uri = null, activate = false, api_version = 1) {
     var post_data = {
         "prt_id": prt_id,
         "client_id": client_id,
         "resource": resource,
+        "scope": scope,
+        "api_version": api_version,
         "refresh_prt": refresh_prt
     };
     if (redirect_uri) {

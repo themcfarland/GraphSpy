@@ -152,8 +152,10 @@ def refresh_to_access_token(
     prt_id: int,
     client_id: str = "d3590ed6-52b3-4102-aeff-aad2292ab01c",
     resource: str = "https://graph.microsoft.com",
+    scope: str = "https://graph.microsoft.com/.default openid offline_access",
     refresh_prt: bool = True,
     redirect_uri: str = None,
+    api_version: int = 1,
 ) -> int:
     prt_row = connection.query_db_json(
         "SELECT * FROM primary_refresh_tokens WHERE id = ?", [prt_id], one=True
@@ -164,20 +166,30 @@ def refresh_to_access_token(
     session_key = binascii.unhexlify(prt_row["session_key"])
     nonce = get_srv_challenge_nonce()
     jwt_payload = {
-        "win_ver": "10.0.26100",
-        "scope": "openid aza" if refresh_prt else "openid",
         "request_nonce": nonce,
         "refresh_token": prt,
-        "redirect_uri": redirect_uri
-        or f"ms-appx-web://Microsoft.AAD.BrokerPlugin/{client_id}",
-        "iss": "aad:brokerplugin",
+        "redirect_uri": f"ms-appx-web://Microsoft.AAD.BrokerPlugin/{client_id}" if not redirect_uri else redirect_uri,
         "grant_type": "refresh_token",
-        "client_id": client_id,
-        "resource": resource,
-        "aud": "login.microsoftonline.com",
-        "iat": str(int(time.time())),
-        "exp": str(int(time.time()) + 3600),
+        "client_id": client_id
     }
+    if api_version == 1:
+        jwt_payload.update({
+            "win_ver": "10.0.26100",
+            "scope": ("openid aza" if refresh_prt else "openid"), # If scope includes "aza", it will issue a new PRT. Else it will issue a regular refresh token
+            "iss": "aad:brokerplugin",
+            "resource": resource,
+            "aud": "login.microsoftonline.com",
+            "iat": str(int(time.time())),
+            "exp": str(int(time.time())+(3600)),
+            })
+    elif api_version == 2:
+        jwt_payload.update({
+            "scope": (f"{scope} aza" if refresh_prt else f"{scope}"), # If scope includes "aza", it will issue a new PRT. Else it will issue a regular refresh token
+            "aud": "https://login.windows.net/common/oauth2/v2.0/token",
+            "iss": "29d9ed98-a469-4536-ade2-f981bc1d605e"
+        })
+    else:
+        raise AppError(f"Invalid API version: {api_version}. Expected 1 or 2.")
     context = os.urandom(24)
     jwt_headers = {"ctx": base64.b64encode(context).decode("utf-8"), "kdf_ver": 2}
     tempjwt = jwt.encode(
@@ -193,14 +205,20 @@ def refresh_to_access_token(
     request_jwt = jwt.encode(
         jwt_payload, derived_key, algorithm="HS256", headers=jwt_headers
     )
+    token_request_data = {
+            'grant_type':'urn:ietf:params:oauth:grant-type:jwt-bearer',
+            'request':request_jwt,
+            'client_info':'1'
+        }
+    if api_version == 1:
+        token_request_data['windows_api_version'] = '2.2'
+        token_url = "https://login.microsoftonline.com/common/oauth2/token"
+    elif api_version == 2:
+        token_request_data['prt_protocol_version'] = '3.0'
+        token_url = "https://login.windows.net/common/oauth2/v2.0/token"
     response = gspy_requests.post(
-        "https://login.microsoftonline.com/common/oauth2/token",
-        data={
-            "windows_api_version": "2.2",
-            "grant_type": "urn:ietf:params:oauth:grant-type:jwt-bearer",
-            "request": request_jwt,
-            "client_info": "1",
-        },
+        token_url,
+        data=token_request_data,
         headers={"User-Agent": ua.get()},
     )
     if response.status_code != 200:

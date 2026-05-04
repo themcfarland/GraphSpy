@@ -244,7 +244,7 @@ def initialize_mobile_app_registration(access_token_id: int, security_info_type)
         )
         if response.status_code != 200:
             logger.error(
-                f"InitializeMobileAppRegistration request failed. Received status code {response.status_code}"
+                f"InitializeMobileAppRegistration request failed. Received status code {response.status_code}\n{response.text}"
             )
             return False
         logger.debug(f"InitializeMobileAppRegistration Raw Response:\n{response.text}")

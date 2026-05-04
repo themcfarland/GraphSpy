@@ -147,9 +147,12 @@ def refresh_prt_to_access_token():
         return create_response(400, "No prt_id specified.")
     client_id = request.form.get("client_id") or "d3590ed6-52b3-4102-aeff-aad2292ab01c"
     resource = request.form.get("resource") or "https://graph.microsoft.com"
+    scope = request.form.get('scope') or ""
+    api_version = int(request.form.get('api_version')) if request.form.get('api_version') else 1
+    api_version = api_version if api_version in [1,2] else 1
     refresh_prt = request.form.get("refresh_prt", "true").lower() == "true"
     redirect_uri = request.form.get("redirect_uri")
-    access_token_id = prt.refresh_to_access_token(prt_id, client_id, resource, refresh_prt, redirect_uri)
+    access_token_id = prt.refresh_to_access_token(prt_id, client_id, resource, scope, refresh_prt, redirect_uri, api_version)
     return create_response(200, f"Successfully refreshed PRT to access token {access_token_id}.", {"access_token_id": access_token_id})
 
 
